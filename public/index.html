@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hoid — Systems & Kernel Engineer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@300;400;500&family=Marcellus&display=swap" rel="stylesheet" />
+<style>
+/* ─── Reset & Variables ─────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --black:    #080808;
+  --surface:  #0e0e0e;
+  --border:   #1e1e1e;
+  --mid:      #2a2a2a;
+  --muted:    #5a5a5a;
+  --body:     #a0a0a0;
+  --light:    #d8d8d8;
+  --white:    #f0ede8;
+  --gold:     #c4943a;
+  --gold-dim: #7a5820;
+  --teal:     #3ecfb2;
+  --teal-dim: #1a5f54;
+
+  --font-display: 'Cormorant Garamond', serif;
+  --font-brand: 'Marcellus', serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --transition: 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--black);
+  color: var(--body);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.8;
+  overflow-x: hidden;
+  cursor: none;
+}
+
+::selection { background: var(--gold-dim); color: var(--white); }
+
+/* ─── Custom Cursor ─────────────────────────────────────────── */
+.cursor-dot {
+  width: 6px; height: 6px;
+  background: var(--gold);
+  border-radius: 50%;
+  position: fixed; top: 0; left: 0;
+  pointer-events: none; z-index: 9999;
+  transform: translate(-50%, -50%);
+  transition: opacity 0.2s;
+}
+.cursor-ring {
+  width: 32px; height: 32px;
+  border: 1px solid rgba(196, 148, 58, 0.4);
+  border-radius: 50%;
+  position: fixed; top: 0; left: 0;
+  pointer-events: none; z-index: 9998;
+  transform: translate(-50%, -50%);
+  transition: width 0.3s, height 0.3s, border-color 0.3s;
+}
+.cursor-ring.hovering {
+  width: 48px; height: 48px;
+  border-color: var(--gold);
+}
+
+/* ─── Noise Overlay ─────────────────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  opacity: 0.028;
+  pointer-events: none; z-index: 1000;
+}
+
+/* ─── Scrollbar ─────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: var(--black); }
+::-webkit-scrollbar-thumb { background: var(--gold-dim); }
+
+/* ─── Navigation ────────────────────────────────────────────── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0;
+  z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 28px 60px;
+  mix-blend-mode: normal;
+}
+nav::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(to bottom, rgba(8,8,8,0.95), transparent);
+  z-index: -1; pointer-events: none;
+}
+.nav-brand {
+  font-family: var(--font-brand);
+  font-size: 18px;
+  color: var(--white);
+  letter-spacing: 0.12em;
+  text-decoration: none;
+  opacity: 0;
+  animation: fadeDown 0.8s 0.2s forwards;
+}
+.nav-links {
+  display: flex; gap: 40px; list-style: none;
+  opacity: 0;
+  animation: fadeDown 0.8s 0.4s forwards;
+}
+.nav-links a {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  transition: color var(--transition);
+  position: relative;
+}
+.nav-links a::after {
+  content: '';
+  position: absolute; bottom: -4px; left: 0;
+  width: 0; height: 1px;
+  background: var(--gold);
+  transition: width var(--transition);
+}
+.nav-links a:hover { color: var(--gold); }
+.nav-links a:hover::after { width: 100%; }
+.nav-status {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; color: var(--muted);
+  opacity: 0;
+  animation: fadeDown 0.8s 0.6s forwards;
+}
+.status-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%; background: var(--teal);
+  animation: pulse-dot 2.5s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(62,207,178,0.4); }
+  50% { opacity: 0.6; box-shadow: 0 0 0 6px rgba(62,207,178,0); }
+}
+
+/* ─── Hero ──────────────────────────────────────────────────── */
+#hero {
+  min-height: 100vh;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  padding: 0 60px 80px;
+  position: relative; overflow: hidden;
+}
+.hero-canvas {
+  position: absolute; inset: 0;
+  z-index: 0;
+}
+.hero-grid {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(196,148,58,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(196,148,58,0.04) 1px, transparent 1px);
+  background-size: 80px 80px;
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 20%, transparent 100%);
+}
+.hero-glow {
+  position: absolute;
+  top: 20%; left: -10%;
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(196,148,58,0.07) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-glow-2 {
+  position: absolute;
+  bottom: 0; right: 10%;
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(62,207,178,0.05) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-label {
+  font-size: 11px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 32px;
+  position: relative; z-index: 1;
+  opacity: 0;
+  animation: fadeUp 1s 0.4s forwards;
+}
+.hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(56px, 8vw, 112px);
+  font-weight: 300;
+  line-height: 1.0;
+  color: var(--white);
+  letter-spacing: -0.02em;
+  position: relative; z-index: 1;
+  opacity: 0;
+  animation: fadeUp 1s 0.6s forwards;
+}
+.hero-title em {
+  font-style: italic;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(240,237,232,0.35);
+}
+.hero-title .gold-word { color: var(--gold); font-style: normal; }
+.hero-meta {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  margin-top: 60px;
+  position: relative; z-index: 1;
+  opacity: 0;
+  animation: fadeUp 1s 0.9s forwards;
+  gap: 40px;
+}
+.hero-desc {
+  max-width: 460px;
+  color: var(--body);
+  font-size: 12px;
+  line-height: 2;
+}
+.hero-terminal {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  border-left: 1px solid var(--border);
+  padding-left: 24px;
+  min-width: 320px;
+}
+.terminal-line { margin-bottom: 4px; }
+.terminal-line .prompt { color: var(--gold-dim); }
+.terminal-line .cmd { color: var(--teal); }
+.terminal-line .out { color: var(--muted); padding-left: 16px; display: block; }
+.blink { animation: blink 1.1s step-end infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.hero-scroll {
+  position: absolute; bottom: 40px; right: 60px;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  opacity: 0;
+  animation: fadeUp 1s 1.4s forwards;
+  z-index: 1;
+}
+.hero-scroll span {
+  font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--muted); writing-mode: vertical-rl;
+}
+.scroll-line {
+  width: 1px; height: 60px;
+  background: linear-gradient(to bottom, var(--gold-dim), transparent);
+  animation: scrollPulse 2s ease-in-out infinite;
+}
+@keyframes scrollPulse {
+  0%, 100% { transform: scaleY(1); opacity: 1; }
+  50% { transform: scaleY(0.6); opacity: 0.4; }
+}
+
+/* ─── Section Base ──────────────────────────────────────────── */
+section { padding: 120px 60px; }
+.section-label {
+  display: flex; align-items: center; gap: 20px;
+  font-size: 10px; letter-spacing: 0.3em; text-transform: uppercase;
+  color: var(--gold); margin-bottom: 64px;
+}
+.section-label::before {
+  content: '';
+  width: 40px; height: 1px;
+  background: var(--gold);
+}
+.reveal {
+  opacity: 0; transform: translateY(30px);
+  transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reveal.visible { opacity: 1; transform: none; }
+.reveal-delay-1 { transition-delay: 0.1s; }
+.reveal-delay-2 { transition-delay: 0.2s; }
+.reveal-delay-3 { transition-delay: 0.3s; }
+.reveal-delay-4 { transition-delay: 0.4s; }
+
+/* ─── Divider ───────────────────────────────────────────────── */
+.divider {
+  width: 100%; height: 1px;
+  background: linear-gradient(to right, transparent, var(--border), transparent);
+  margin: 0 60px;
+  width: calc(100% - 120px);
+}
+
+/* ─── About ─────────────────────────────────────────────────── */
+#about {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 80px;
+  align-items: start;
+}
+.about-left {}
+.about-heading {
+  font-family: var(--font-display);
+  font-size: clamp(38px, 5vw, 64px);
+  font-weight: 300;
+  color: var(--white);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin-bottom: 32px;
+}
+.about-heading em { font-style: italic; color: var(--gold); }
+.about-body {
+  font-size: 12px;
+  color: var(--body);
+  line-height: 2.1;
+  margin-bottom: 20px;
+  max-width: 500px;
+}
+.about-right { padding-top: 80px; }
+.stat-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  border: 1px solid var(--border);
+  margin-bottom: 40px;
+}
+.stat {
+  padding: 28px 24px;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+}
+.stat:nth-child(2n) { border-right: none; }
+.stat:nth-child(n+3) { border-top: 1px solid var(--border); }
+.stat-num {
+  font-family: var(--font-display);
+  font-size: 48px;
+  font-weight: 300;
+  color: var(--white);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.stat-num span { color: var(--gold); font-size: 32px; }
+.stat-label {
+  font-size: 10px; letter-spacing: 0.2em;
+  text-transform: uppercase; color: var(--muted);
+}
+.cta-link {
+  display: inline-flex; align-items: center; gap: 12px;
+  font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase;
+  color: var(--gold); text-decoration: none;
+  border-bottom: 1px solid var(--gold-dim);
+  padding-bottom: 4px;
+  transition: gap var(--transition), border-color var(--transition);
+}
+.cta-link:hover { gap: 20px; border-color: var(--gold); }
+.cta-link .arrow { font-size: 14px; }
+
+/* ─── Skills ────────────────────────────────────────────────── */
+#skills { background: var(--surface); }
+.skills-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  border: 1px solid var(--border);
+}
+.skill-card {
+  padding: 40px 32px;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  transition: background var(--transition);
+  position: relative; overflow: hidden;
+}
+.skill-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(to right, var(--gold), var(--teal));
+  transform: scaleX(0); transform-origin: left;
+  transition: transform var(--transition);
+}
+.skill-card:hover { background: rgba(196,148,58,0.03); }
+.skill-card:hover::before { transform: scaleX(1); }
+.skill-card:last-child { border-right: none; }
+.skill-icon {
+  font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--gold); margin-bottom: 20px;
+}
+.skill-title {
+  font-family: var(--font-display);
+  font-size: 22px; font-weight: 400;
+  color: var(--white); margin-bottom: 16px;
+}
+.skill-tags {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  margin-top: 24px;
+}
+.tag {
+  font-size: 10px; letter-spacing: 0.1em;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  transition: color var(--transition), border-color var(--transition);
+}
+.skill-card:hover .tag { color: var(--teal); border-color: var(--teal-dim); }
+
+/* ─── Projects ──────────────────────────────────────────────── */
+#projects {}
+.projects-header {
+  display: flex; justify-content: space-between; align-items: flex-end;
+  margin-bottom: 64px;
+}
+.projects-heading {
+  font-family: var(--font-display);
+  font-size: clamp(38px, 5vw, 64px);
+  font-weight: 300;
+  color: var(--white);
+  letter-spacing: -0.02em;
+}
+.projects-heading em { font-style: italic; color: var(--gold); }
+#projects-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1px;
+  border: 1px solid var(--border);
+}
+.project-card {
+  padding: 48px 44px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  transition: background var(--transition);
+  position: relative; overflow: hidden;
+  cursor: pointer;
+}
+.project-card:nth-child(2n) { border-right: none; }
+.project-card::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(196,148,58,0.05), transparent);
+  opacity: 0; transition: opacity var(--transition);
+}
+.project-card:hover { background: #0f0f0f; }
+.project-card:hover::after { opacity: 1; }
+.project-meta {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 24px;
+}
+.project-tag {
+  font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase;
+  color: var(--gold);
+}
+.project-status {
+  font-size: 10px; padding: 3px 10px;
+  border: 1px solid;
+}
+.project-status.active { color: var(--teal); border-color: var(--teal-dim); }
+.project-status.stable { color: #6fcf97; border-color: rgba(111,207,151,0.3); }
+.project-status.research { color: var(--gold); border-color: var(--gold-dim); }
+.project-title {
+  font-family: var(--font-display);
+  font-size: 28px; font-weight: 400;
+  color: var(--white); margin-bottom: 4px;
+  line-height: 1.2;
+}
+.project-subtitle {
+  font-size: 11px; color: var(--muted);
+  letter-spacing: 0.05em; margin-bottom: 20px;
+}
+.project-desc {
+  font-size: 12px; color: var(--body);
+  line-height: 1.9; margin-bottom: 28px;
+}
+.project-stack {
+  display: flex; flex-wrap: wrap; gap: 8px;
+}
+.stack-tag {
+  font-size: 10px;
+  color: var(--teal);
+  background: rgba(62,207,178,0.06);
+  border: 1px solid rgba(62,207,178,0.15);
+  padding: 3px 10px;
+  letter-spacing: 0.05em;
+}
+.projects-loader {
+  grid-column: 1 / -1;
+  padding: 80px;
+  text-align: center;
+  color: var(--muted);
+}
+
+/* ─── Contact ───────────────────────────────────────────────── */
+#contact {
+  background: var(--surface);
+  position: relative; overflow: hidden;
+}
+#contact::before {
+  content: '';
+  position: absolute; top: -200px; right: -100px;
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(196,148,58,0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+.contact-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 100px; align-items: start;
+}
+.contact-heading {
+  font-family: var(--font-display);
+  font-size: clamp(38px, 5vw, 64px);
+  font-weight: 300;
+  color: var(--white);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin-bottom: 24px;
+}
+.contact-heading em { font-style: italic; color: var(--gold); }
+.contact-body {
+  font-size: 12px; color: var(--body); line-height: 2.1;
+  margin-bottom: 40px;
+}
+.contact-links {
+  display: flex; flex-direction: column; gap: 16px;
+}
+.contact-link {
+  display: flex; align-items: center; gap: 16px;
+  color: var(--light); text-decoration: none;
+  font-size: 12px;
+  transition: color var(--transition), gap var(--transition);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 16px;
+}
+.contact-link:hover { color: var(--gold); gap: 24px; }
+.contact-link-icon {
+  width: 32px; height: 32px;
+  border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; color: var(--muted);
+  flex-shrink: 0;
+  transition: border-color var(--transition), color var(--transition);
+}
+.contact-link:hover .contact-link-icon { border-color: var(--gold); color: var(--gold); }
+
+/* Form */
+.form-group { margin-bottom: 24px; }
+label {
+  display: block;
+  font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 8px;
+}
+input, textarea {
+  width: 100%;
+  background: transparent;
+  border: none; border-bottom: 1px solid var(--border);
+  color: var(--white);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 12px 0;
+  outline: none;
+  transition: border-color var(--transition);
+  caret-color: var(--gold);
+}
+input:focus, textarea:focus { border-color: var(--gold); }
+textarea { resize: none; height: 120px; }
+input::placeholder, textarea::placeholder { color: var(--muted); }
+
+.submit-btn {
+  display: inline-flex; align-items: center; gap: 16px;
+  background: transparent;
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  font-family: var(--font-mono);
+  font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase;
+  padding: 16px 36px;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition), gap var(--transition);
+  width: 100%; justify-content: center;
+  margin-top: 8px;
+}
+.submit-btn:hover {
+  background: var(--gold);
+  color: var(--black);
+  gap: 24px;
+}
+.form-msg {
+  font-size: 11px; margin-top: 12px;
+  padding: 10px 16px;
+  display: none;
+}
+.form-msg.success { color: var(--teal); border: 1px solid var(--teal-dim); }
+.form-msg.error   { color: #eb5757; border: 1px solid rgba(235,87,87,0.3); }
+
+/* ─── Footer ────────────────────────────────────────────────── */
+footer {
+  padding: 48px 60px;
+  display: flex; justify-content: space-between; align-items: center;
+  border-top: 1px solid var(--border);
+}
+.footer-brand {
+  font-family: var(--font-brand);
+  font-size: 18px; letter-spacing: 0.1em;
+  color: var(--white);
+}
+.footer-copy {
+  font-size: 10px; letter-spacing: 0.15em;
+  color: var(--muted); text-transform: uppercase;
+}
+.footer-links { display: flex; gap: 32px; }
+.footer-links a {
+  font-size: 10px; letter-spacing: 0.15em;
+  color: var(--muted); text-decoration: none;
+  text-transform: uppercase;
+  transition: color var(--transition);
+}
+.footer-links a:hover { color: var(--gold); }
+
+/* ─── Keyframes ─────────────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes fadeDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ─── Responsive ────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  nav { padding: 24px 32px; }
+  section { padding: 80px 32px; }
+  #hero { padding: 0 32px 60px; }
+  .divider { margin: 0 32px; width: calc(100% - 64px); }
+  #about { grid-template-columns: 1fr; gap: 48px; }
+  .skills-grid { grid-template-columns: repeat(2, 1fr); }
+  .skill-card:nth-child(2n) { border-right: none; }
+  .skill-card:nth-child(2n+1) { border-right: 1px solid var(--border); }
+  .contact-grid { grid-template-columns: 1fr; gap: 60px; }
+  footer { flex-direction: column; gap: 24px; text-align: center; }
+}
+@media (max-width: 768px) {
+  nav { padding: 20px 24px; }
+  .nav-links { display: none; }
+  section { padding: 64px 24px; }
+  #hero { padding: 0 24px 48px; }
+  #projects-grid { grid-template-columns: 1fr; }
+  .project-card { border-right: none; }
+  .skills-grid { grid-template-columns: 1fr; }
+  .hero-meta { flex-direction: column; }
+  .hero-terminal { border-left: none; border-top: 1px solid var(--border); padding: 16px 0 0; min-width: unset; }
+  .stat-grid { grid-template-columns: 1fr; }
+  .stat { border-right: none !important; }
+  .divider { margin: 0 24px; width: calc(100% - 48px); }
+  footer { padding: 32px 24px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Cursor -->
+<div class="cursor-dot" id="cursorDot"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- Nav -->
+<nav>
+  <a class="nav-brand" href="#hero">HOID</a>
+  <ul class="nav-links">
+    <li><a href="#about">About</a></li>
+    <li><a href="#skills">Skills</a></li>
+    <li><a href="#projects">Work</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+  <div class="nav-status">
+    <div class="status-dot"></div>
+    <span>Open to collaboration</span>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section id="hero">
+  <canvas class="hero-canvas" id="particleCanvas"></canvas>
+  <div class="hero-grid"></div>
+  <div class="hero-glow"></div>
+  <div class="hero-glow-2"></div>
+
+  <p class="hero-label">Systems &amp; Kernel Engineer</p>
+  <h1 class="hero-title">
+    Building at the<br>
+    <em>edge</em> of the<br>
+    <span class="gold-word">kernel.</span>
+  </h1>
+
+  <div class="hero-meta">
+    <p class="hero-desc">
+      Specializing in custom Android kernel development, low-level Linux systems,
+      and root management integration. Crafting stable, performant kernels for
+      MediaTek-based devices — from source to boot.
+    </p>
+    <div class="hero-terminal">
+      <div class="terminal-line">
+        <span class="prompt">~/KernelBumi</span>
+        <span class="cmd"> $ uname -r</span>
+      </div>
+      <div class="terminal-line">
+        <span class="out">4.19.327-KernelBumi-KSU-Next</span>
+      </div>
+      <div class="terminal-line" style="margin-top:8px;">
+        <span class="prompt">~/KernelBumi</span>
+        <span class="cmd"> $ make -j$(nproc)</span>
+      </div>
+      <div class="terminal-line">
+        <span class="out">LD [M] drivers/kernelsu/kernelsu.ko</span>
+      </div>
+      <div class="terminal-line">
+        <span class="out">Kernel: arch/arm64/boot/Image.gz-dtb</span>
+      </div>
+      <div class="terminal-line" style="margin-top:8px;">
+        <span class="prompt">~/KernelBumi</span>
+        <span class="cmd"> $<span class="blink">_</span></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero-scroll">
+    <span>Scroll</span>
+    <div class="scroll-line"></div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- About -->
+<section id="about">
+  <div class="about-left reveal">
+    <p class="section-label">About</p>
+    <h2 class="about-heading">
+      I write code that<br>
+      runs <em>beneath</em><br>
+      everything else.
+    </h2>
+    <p class="about-body">
+      I work at the lowest layer of the Android stack — the Linux kernel.
+      My focus is on custom kernel engineering for MediaTek SoCs,
+      building deeply integrated root management solutions and performance
+      tuning frameworks that push hardware to its real limits.
+    </p>
+    <p class="about-body">
+      From resolving clang symbol mismatches in SUSFS backports to
+      authoring full KernelSU module systems with runtime mode switching,
+      I operate where precision is not optional.
+    </p>
+    <a href="#contact" class="cta-link">
+      Get in touch <span class="arrow">→</span>
+    </a>
+  </div>
+  <div class="about-right reveal reveal-delay-2">
+    <div class="stat-grid">
+      <div class="stat">
+        <div class="stat-num">4<span>.19</span></div>
+        <div class="stat-label">Kernel Branch</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">2<span>+</span></div>
+        <div class="stat-label">Root Frameworks</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">G<span>85</span></div>
+        <div class="stat-label">Helio Target SoC</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">∞</div>
+        <div class="stat-label">Build Iterations</div>
+      </div>
+    </div>
+    <a href="https://github.com" target="_blank" class="cta-link">
+      View GitHub <span class="arrow">→</span>
+    </a>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- Skills -->
+<section id="skills">
+  <p class="section-label reveal">Expertise</p>
+  <div class="skills-grid">
+    <div class="skill-card reveal">
+      <div class="skill-icon">01 / Kernel</div>
+      <div class="skill-title">Linux Kernel Dev</div>
+      <p style="font-size:12px;color:var(--body);line-height:1.9;">
+        Custom kernel builds targeting Linux 4.19 on MediaTek BSPs.
+        Driver patching, scheduler tuning, and memory subsystem optimization.
+      </p>
+      <div class="skill-tags">
+        <span class="tag">C</span>
+        <span class="tag">Kbuild</span>
+        <span class="tag">Clang/LLVM</span>
+        <span class="tag">ARM64</span>
+        <span class="tag">DTS</span>
+      </div>
+    </div>
+    <div class="skill-card reveal reveal-delay-1">
+      <div class="skill-icon">02 / Root</div>
+      <div class="skill-title">Root Management</div>
+      <p style="font-size:12px;color:var(--body);line-height:1.9;">
+        Deep integration of KernelSU-Next and SUSFS 2.0 into production kernels.
+        Syscall interception, overlay filesystem hiding, and module authoring.
+      </p>
+      <div class="skill-tags">
+        <span class="tag">KernelSU</span>
+        <span class="tag">SUSFS</span>
+        <span class="tag">Magisk</span>
+        <span class="tag">OverlayFS</span>
+      </div>
+    </div>
+    <div class="skill-card reveal reveal-delay-2">
+      <div class="skill-icon">03 / Performance</div>
+      <div class="skill-title">SoC Optimization</div>
+      <p style="font-size:12px;color:var(--body);line-height:1.9;">
+        BORE/BFQ patching, ZRAM/ZSTD tuning, Mali DVFS curves,
+        and MediaTek PPM interface control for real-world perf gains.
+      </p>
+      <div class="skill-tags">
+        <span class="tag">BORE</span>
+        <span class="tag">BFQ</span>
+        <span class="tag">ZSTD</span>
+        <span class="tag">cpuset</span>
+        <span class="tag">DVFS</span>
+      </div>
+    </div>
+    <div class="skill-card reveal reveal-delay-3">
+      <div class="skill-icon">04 / Tooling</div>
+      <div class="skill-title">Build & Automation</div>
+      <p style="font-size:12px;color:var(--body);line-height:1.9;">
+        Parameterized CI pipelines for fork integration, automated patch application,
+        and git branch management across multi-repo kernel trees.
+      </p>
+      <div class="skill-tags">
+        <span class="tag">Bash</span>
+        <span class="tag">Python</span>
+        <span class="tag">Git</span>
+        <span class="tag">GitHub Actions</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- Projects -->
+<section id="projects">
+  <div class="projects-header reveal">
+    <h2 class="projects-heading">Selected<br><em>Work</em></h2>
+  </div>
+  <div id="projects-grid">
+    <div class="projects-loader">Loading projects...</div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- Contact -->
+<section id="contact">
+  <p class="section-label reveal">Contact</p>
+  <div class="contact-grid">
+    <div class="reveal">
+      <h2 class="contact-heading">
+        Let's build<br>something<br><em>precise.</em>
+      </h2>
+      <p class="contact-body">
+        Open to collaboration on kernel projects, root management systems,
+        Android customization, and low-level tooling. Reach out.
+      </p>
+      <div class="contact-links">
+        <a href="https://github.com" target="_blank" class="contact-link">
+          <div class="contact-link-icon">GH</div>
+          <span>github.com/hoid</span>
+        </a>
+        <a href="mailto:hoid@proton.me" class="contact-link">
+          <div class="contact-link-icon">@</div>
+          <span>hoid@proton.me</span>
+        </a>
+        <a href="https://t.me/hoid" target="_blank" class="contact-link">
+          <div class="contact-link-icon">TG</div>
+          <span>t.me/hoid</span>
+        </a>
+      </div>
+    </div>
+    <div class="reveal reveal-delay-2">
+      <form id="contactForm" novalidate>
+        <div class="form-group">
+          <label for="name">Name</label>
+          <input type="text" id="name" placeholder="Your name" required />
+        </div>
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" placeholder="your@email.com" required />
+        </div>
+        <div class="form-group">
+          <label for="message">Message</label>
+          <textarea id="message" placeholder="Tell me about the project..." required></textarea>
+        </div>
+        <button type="submit" class="submit-btn">
+          Send Message <span>→</span>
+        </button>
+        <div class="form-msg" id="formMsg"></div>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <span class="footer-brand">HOID</span>
+  <span class="footer-copy">© 2026 — All Rights Reserved</span>
+  <div class="footer-links">
+    <a href="https://github.com" target="_blank">GitHub</a>
+    <a href="#projects">Work</a>
+    <a href="#contact">Contact</a>
+  </div>
+</footer>
+
+<script>
+/* ─── Cursor ──────────────────────────────────────────────── */
+const dot  = document.getElementById('cursorDot');
+const ring = document.getElementById('cursorRing');
+let mx = 0, my = 0, rx = 0, ry = 0;
+document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+(function animCursor() {
+  rx += (mx - rx) * 0.14;
+  ry += (my - ry) * 0.14;
+  dot.style.transform  = `translate(${mx}px,${my}px) translate(-50%,-50%)`;
+  ring.style.transform = `translate(${rx}px,${ry}px) translate(-50%,-50%)`;
+  requestAnimationFrame(animCursor);
+})();
+document.querySelectorAll('a,button,input,textarea,.project-card,.skill-card').forEach(el => {
+  el.addEventListener('mouseenter', () => ring.classList.add('hovering'));
+  el.addEventListener('mouseleave', () => ring.classList.remove('hovering'));
+});
+
+/* ─── Particle Canvas ─────────────────────────────────────── */
+(function(){
+  const canvas = document.getElementById('particleCanvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, particles = [];
+
+  function resize() {
+    W = canvas.width  = canvas.offsetWidth;
+    H = canvas.height = canvas.offsetHeight;
+  }
+  resize();
+  window.addEventListener('resize', () => { resize(); init(); });
+
+  class Particle {
+    constructor() { this.reset(); }
+    reset() {
+      this.x = Math.random() * W;
+      this.y = Math.random() * H;
+      this.r = Math.random() * 1.2 + 0.2;
+      this.vx = (Math.random() - 0.5) * 0.25;
+      this.vy = (Math.random() - 0.5) * 0.25;
+      this.life = Math.random();
+      this.speed = Math.random() * 0.003 + 0.001;
+      this.gold = Math.random() > 0.65;
+    }
+    update() {
+      this.x += this.vx; this.y += this.vy;
+      this.life += this.speed;
+      if (this.life > 1) this.reset();
+      if (this.x < 0 || this.x > W || this.y < 0 || this.y > H) this.reset();
+    }
+    draw() {
+      const alpha = Math.sin(this.life * Math.PI) * 0.5;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+      ctx.fillStyle = this.gold
+        ? `rgba(196,148,58,${alpha})`
+        : `rgba(62,207,178,${alpha * 0.5})`;
+      ctx.fill();
+    }
+  }
+
+  function init() {
+    particles = Array.from({ length: 80 }, () => new Particle());
+  }
+  init();
+
+  // Connection lines
+  function drawLines() {
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < 120) {
+          const a = (1 - dist / 120) * 0.08;
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.strokeStyle = `rgba(196,148,58,${a})`;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+    }
+  }
+
+  function loop() {
+    ctx.clearRect(0, 0, W, H);
+    particles.forEach(p => { p.update(); p.draw(); });
+    drawLines();
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
+
+/* ─── Scroll Reveal ───────────────────────────────────────── */
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.12 });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+/* ─── Load Projects ───────────────────────────────────────── */
+async function loadProjects() {
+  const grid = document.getElementById('projects-grid');
+  try {
+    const res  = await fetch('/api/projects');
+    const data = await res.json();
+    if (!data.success) throw new Error();
+    grid.innerHTML = '';
+    data.data.forEach((p, i) => {
+      const statusClass = p.status.toLowerCase();
+      const card = document.createElement('div');
+      card.className = 'project-card reveal' + (i % 2 !== 0 ? ' reveal-delay-1' : '');
+      card.innerHTML = `
+        <div class="project-meta">
+          <span class="project-tag">${p.tag}</span>
+          <span class="project-status ${statusClass}">${p.status}</span>
+        </div>
+        <h3 class="project-title">${p.title}</h3>
+        <p class="project-subtitle">${p.subtitle}</p>
+        <p class="project-desc">${p.desc}</p>
+        <div class="project-stack">
+          ${p.stack.map(s => `<span class="stack-tag">${s}</span>`).join('')}
+        </div>`;
+      grid.appendChild(card);
+      observer.observe(card);
+    });
+  } catch {
+    // Fallback for static mode (no server)
+    grid.innerHTML = `
+      <div class="project-card">
+        <div class="project-meta"><span class="project-tag">Linux 4.19 · MediaTek Helio G85</span><span class="project-status active">Active</span></div>
+        <h3 class="project-title">KernelBumi</h3>
+        <p class="project-subtitle">Custom Android Kernel</p>
+        <p class="project-desc">Full custom kernel targeting the Helio G85 SoC. Integrates KernelSU-Next and SUSFS 2.0.0. Includes BORE scheduler, BFQ I/O, and Mali-G52 DVFS tuning patches.</p>
+        <div class="project-stack"><span class="stack-tag">C</span><span class="stack-tag">KernelSU-Next</span><span class="stack-tag">SUSFS 2.0</span><span class="stack-tag">Clang/LLVM</span></div>
+      </div>
+      <div class="project-card">
+        <div class="project-meta"><span class="project-tag">Android · Root Module</span><span class="project-status stable">Stable</span></div>
+        <h3 class="project-title">Fast Hybrid Optimizer</h3>
+        <p class="project-subtitle">Magisk/KernelSU Module</p>
+        <p class="project-desc">Unified module merging dual Normal/Battery optimizer modes with independent fast-charging tweaks and runtime Action button toggle.</p>
+        <div class="project-stack"><span class="stack-tag">Shell</span><span class="stack-tag">Magisk API</span><span class="stack-tag">KernelSU API</span><span class="stack-tag">cpuset</span></div>
+      </div>
+      <div class="project-card">
+        <div class="project-meta"><span class="project-tag">SUSFS 2.0 · Linux 4.19</span><span class="project-status research">Research</span></div>
+        <h3 class="project-title">SUSFS Backport Toolkit</h3>
+        <p class="project-subtitle">Kernel Compatibility Layer</p>
+        <p class="project-desc">Patches to backport SUSFS 2.0.0 symbols into Linux 4.19 BSP trees, resolving symbol mismatches and conditional directive errors across clang toolchains.</p>
+        <div class="project-stack"><span class="stack-tag">C</span><span class="stack-tag">Kbuild</span><span class="stack-tag">Clang</span><span class="stack-tag">Git</span></div>
+      </div>
+      <div class="project-card">
+        <div class="project-meta"><span class="project-tag">CI · Shell Scripting</span><span class="project-status stable">Stable</span></div>
+        <h3 class="project-title">KernelSU Fork Automator</h3>
+        <p class="project-subtitle">Build Pipeline</p>
+        <p class="project-desc">Parameterized shell scripts for automated integration of KernelSU forks with SUSFS patches. Idempotent patch application targeting simonpunk's kernel-4.19 branch.</p>
+        <div class="project-stack"><span class="stack-tag">Bash</span><span class="stack-tag">Python</span><span class="stack-tag">GitHub Actions</span><span class="stack-tag">Git</span></div>
+      </div>`;
+    grid.querySelectorAll('.project-card').forEach((c, i) => {
+      c.classList.add('reveal');
+      if (i % 2 !== 0) c.classList.add('reveal-delay-1');
+      observer.observe(c);
+    });
+  }
+}
+loadProjects();
+
+/* ─── Contact Form ────────────────────────────────────────── */
+document.getElementById('contactForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = e.target.querySelector('.submit-btn');
+  const msg = document.getElementById('formMsg');
+  const name = document.getElementById('name').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const message = document.getElementById('message').value.trim();
+
+  if (!name || !email || !message) {
+    msg.textContent = 'Please fill in all fields.';
+    msg.className = 'form-msg error';
+    msg.style.display = 'block'; return;
+  }
+
+  btn.textContent = 'Sending...';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('/api/contact', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, message })
+    });
+    const data = await res.json();
+    if (data.success) {
+      msg.textContent = data.message;
+      msg.className = 'form-msg success';
+      e.target.reset();
+    } else {
+      throw new Error(data.message);
+    }
+  } catch(err) {
+    msg.textContent = err.message || 'Something went wrong. Try emailing directly.';
+    msg.className = 'form-msg error';
+  }
+  msg.style.display = 'block';
+  btn.textContent = 'Send Message →';
+  btn.disabled = false;
+});
+
+/* ─── Nav active state ────────────────────────────────────── */
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.nav-links a');
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(s => {
+    if (window.scrollY >= s.offsetTop - 120) current = s.id;
+  });
+  navLinks.forEach(a => {
+    a.style.color = a.getAttribute('href') === '#' + current
+      ? 'var(--gold)' : '';
+  });
+});
+</script>
+</body>
+</html>
